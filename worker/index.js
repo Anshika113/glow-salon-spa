@@ -1,5 +1,5 @@
 /**
- * Evara Events & Weddings — API Worker.
+ * Glow Salon & Spa — API Worker.
  *
  * Replaces backend/app.py. Same routes and response shapes, so the React
  * frontend works unchanged (api.js falls back to API_BASE = '/api').
@@ -32,18 +32,14 @@ async function readJson(request) {
 
 // --- Route handlers ---------------------------------------------------------
 
-async function enquiry(request, env) {
+async function contact(request, env) {
   const b = await readJson(request);
   const f = {
     name: s(b.name),
     email: s(b.email),
     phone: s(b.phone),
-    event_type: s(b.event_type),
-    event_date: s(b.event_date),
-    guests: s(b.guests),
-    budget: s(b.budget),
+    service: s(b.service),
     message: s(b.message),
-    source: s(b.source) || 'website',
   };
 
   const errors = {};
@@ -51,52 +47,31 @@ async function enquiry(request, env) {
   if (!f.phone) errors.phone = 'Please enter a phone number.';
   else if (f.phone.replace(/\D/g, '').length < 7) errors.phone = 'Please enter a valid phone number.';
   if (f.email && !EMAIL_RE.test(f.email)) errors.email = 'Please enter a valid email address.';
-  if (!f.message) errors.message = 'Please tell us a little about your event.';
+  if (!f.message) errors.message = 'Please tell us how we can help.';
 
   if (Object.keys(errors).length) {
     return json({ ok: false, errors, message: 'Please check the highlighted fields.' }, 400);
   }
 
   const res = await env.DB.prepare(
-    `INSERT INTO leads
-       (name, email, phone, event_type, event_date, guests, budget, message, source, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO enquiries (name, email, phone, service, message, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
   )
-    .bind(
-      f.name, f.email, f.phone, f.event_type, f.event_date,
-      f.guests, f.budget, f.message, f.source, now()
-    )
+    .bind(f.name, f.email, f.phone, f.service, f.message, now())
     .run();
 
   return json(
     {
       ok: true,
       id: res.meta.last_row_id,
-      message: 'Thank you! Our events team will get back to you within 24 hours.',
+      message: "Thanks! We've received your enquiry and will get back to you shortly.",
     },
     201
   );
 }
 
-async function subscribe(request, env) {
-  const email = s((await readJson(request)).email);
-  if (!EMAIL_RE.test(email)) {
-    return json(
-      { ok: false, errors: { email: 'Please enter a valid email.' }, message: 'Please enter a valid email.' },
-      400
-    );
-  }
-
-  // INSERT OR IGNORE => re-subscribing is a no-op, not an error.
-  await env.DB.prepare('INSERT OR IGNORE INTO subscribers (email, created_at) VALUES (?, ?)')
-    .bind(email, now())
-    .run();
-
-  return json({ ok: true, message: "You're subscribed — thank you!" });
-}
-
-async function listLeads(request, env) {
-  // Returns every captured lead — gate it behind ADMIN_TOKEN if the secret is set.
+async function listEnquiries(request, env) {
+  // Returns every captured enquiry — gate it behind ADMIN_TOKEN if the secret is set.
   if (env.ADMIN_TOKEN) {
     const auth = request.headers.get('Authorization') || '';
     if (auth !== `Bearer ${env.ADMIN_TOKEN}`) {
@@ -104,9 +79,9 @@ async function listLeads(request, env) {
     }
   }
   const { results } = await env.DB.prepare(
-    'SELECT * FROM leads ORDER BY id DESC LIMIT 200'
+    'SELECT * FROM enquiries ORDER BY id DESC LIMIT 200'
   ).all();
-  return json({ count: results.length, leads: results });
+  return json({ count: results.length, enquiries: results });
 }
 
 // --- Entry point ------------------------------------------------------------
@@ -118,11 +93,10 @@ export default {
 
     try {
       if (pathname === '/api/health' && method === 'GET') {
-        return json({ status: 'ok', service: 'evara-events', time: now() });
+        return json({ status: 'ok', service: 'glow-salon-spa', time: now() });
       }
-      if (pathname === '/api/enquiry' && method === 'POST') return enquiry(request, env);
-      if (pathname === '/api/subscribe' && method === 'POST') return subscribe(request, env);
-      if (pathname === '/api/leads' && method === 'GET') return listLeads(request, env);
+      if (pathname === '/api/contact' && method === 'POST') return contact(request, env);
+      if (pathname === '/api/enquiries' && method === 'GET') return listEnquiries(request, env);
 
       if (pathname.startsWith('/api/')) {
         return json({ ok: false, message: 'Not found' }, 404);
