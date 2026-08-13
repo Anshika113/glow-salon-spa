@@ -1,25 +1,24 @@
 {
-	"name": "evara-events",
-	"main": "worker/index.js",
-	"compatibility_date": "2026-08-01",
-	"assets": {
-		"directory": "./frontend/dist",
-		"binding": "ASSETS",
-		// Unmatched paths fall back to index.html so react-router deep links work.
-		"not_found_handling": "single-page-application",
-		// Only /api/* wakes the Worker; everything else is served from the edge.
-		"run_worker_first": [
-			"/api/*"
-		]
-	},
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "evara-events",
-			"database_id": "f17dc7e5-a3ad-4fa8-a962-e6536de7365b"
-		}
-	],
-	"observability": {
-		"enabled": true
-	}
+  "name": "glow-salon-spa",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-08-01",
+
+  "assets": {
+    "directory": "./frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "glow-salon-spa",
+      "database_id": "PASTE_DATABASE_ID_FROM_STEP_1"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
 }
