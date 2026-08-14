@@ -39,7 +39,7 @@ export default function Footer() {
       <div className="footer__bar">
         <div className="container">
           <span>© {year} {business.name}. All rights reserved.</span>
-          <span className="footer__muted">Design & Developed by <a href=tel:8604438328">Anshika</a></span>
+          <span className="footer__muted">Design & Developed by <a href="tel:8604438328">Anshika</a></span>
         </div>
       </div>
     </footer>
