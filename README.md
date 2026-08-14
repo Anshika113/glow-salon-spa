@@ -184,4 +184,4 @@ offline. To use real pictures, either:
 - React 18 + React Router 6, built with Vite 5
 - Cloudflare Workers + D1; no server to run, no Python host required
 - D1 is SQLite-compatible, so `schema.sql` matches the original `backend/enquiries.db`
-- No paid services required to run or deploy (Workers and D1 free tiers) 
+- No paid services required to run or deploy (Workers and D1 free tiers)
