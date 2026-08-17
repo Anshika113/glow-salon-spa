@@ -27,10 +27,11 @@ Editorial, art-directed layout · WebP with JPEG fallback and responsive `srcset
 · appointment request flow (service, preferred date & time, name, phone) saved
 to D1 · WhatsApp as a first-class booking channel · mobile Call / WhatsApp /
 Book action bar · click-to-call · per-category service pages with deep links ·
-filterable gallery · Google Maps · spam protection (honeypot + per-IP rate
-limit) · SEO (title, meta description, Open Graph image, canonical, sitemap,
-robots, `BeautySalon` structured data) · accessible forms, focus states and skip
-link · restrained scroll reveals that respect `prefers-reduced-motion`.
+filterable gallery · Google Maps · instant booking alerts by email and Telegram
+· spam protection (honeypot + per-IP rate limit) · SEO (title, meta description,
+Open Graph image, canonical, sitemap, robots, `BeautySalon` structured data) ·
+accessible forms, focus states and skip link · restrained scroll reveals that
+respect `prefers-reduced-motion`.
 
 ### Spam protection
 
@@ -95,7 +96,8 @@ glow-salon-spa/
 ├─ wrangler.jsonc          Worker name, static-assets config, D1 binding
 ├─ schema.sql              D1 table (enquiries)
 ├─ worker/
-│  └─ index.js             The API: /api/contact, /api/enquiries, /api/health
+│  ├─ index.js             The API: /api/contact, /api/enquiries, /api/health
+│  └─ notify.js            Booking alerts — Resend email + Telegram, both optional
 ├─ backend/                Legacy FastAPI version — kept for reference, not deployed
 └─ frontend/               React app (Vite)
    ├─ index.html           SEO meta, fonts, LocalBusiness JSON-LD
@@ -133,8 +135,8 @@ redesign — same routes, same request and response shapes.
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| `POST` | `/api/contact` | Validate + store an appointment request / enquiry |
-| `GET`  | `/api/enquiries` | List captured enquiries (see below) |
+| `POST` | `/api/contact` | Validate an appointment request, store it if a database is bound, and alert the salon |
+| `GET`  | `/api/enquiries` | List captured enquiries (see below) — `501` when no database is bound |
 | `GET`  | `/api/health` | Health check |
 
 Name, phone and message are required; email is validated if provided. Successful
@@ -151,6 +153,69 @@ npx wrangler secret put ADMIN_TOKEN
 
 With the secret set, the endpoint requires `Authorization: Bearer <token>`.
 Without it, the endpoint is public — set it before go-live.
+
+---
+
+## Booking notifications
+
+Without this, a request only lands in D1 and the salon has to go looking for it —
+so in practice bookings get missed. Every new request is pushed straight to
+whoever runs the salon, over two independent channels. **Both are optional**;
+each switches on only when its secrets are present.
+
+### Email — Resend
+
+Free for 3,000 emails/month. Sign up at [resend.com](https://resend.com), verify
+your domain (or use their `onboarding@resend.dev` sender to test), then:
+
+```bash
+npx wrangler secret put RESEND_API_KEY     # re_...
+npx wrangler secret put NOTIFY_TO          # owner@glowsalonspa.com (comma-separate for several)
+npx wrangler secret put NOTIFY_FROM        # "Glow Salon & Spa <bookings@yourdomain.com>"
+```
+
+The email is laid out in the site's own palette and carries **Reply on WhatsApp**
+and **Call** buttons wired to the customer's number, so the salon can respond in
+one tap. `reply_to` is set to the customer's email when they gave one.
+
+### Telegram — instant push to a phone
+
+Free, no domain needed, and the fastest option for a salon owner who lives on
+their phone. Message [@BotFather](https://t.me/BotFather) → `/newbot` → copy the
+token. Then message your new bot once and open
+`https://api.telegram.org/bot<TOKEN>/getUpdates` to find your chat id.
+
+```bash
+npx wrangler secret put TELEGRAM_BOT_TOKEN
+npx wrangler secret put TELEGRAM_CHAT_ID   # a group id works too, so the whole team sees it
+```
+
+> Indian mobiles are usually typed as 10 digits, so the WhatsApp reply link
+> prefixes `91`. Set the `DEFAULT_COUNTRY_CODE` var in `wrangler.jsonc` if you're
+> elsewhere.
+
+### Running without a database
+
+D1 is **optional**. If notifications are configured, the site works with no
+database at all — handy if you'd rather not manage one:
+
+| Storage | Notification | Customer sees | Behaviour |
+|---|---|---|---|
+| saved | configured | success | Notified in the background, after the response |
+| saved | fails | success | Request is safe in D1; the failure is logged |
+| **no DB / DB fails** | delivered | success | The notification **is** the record, so it's awaited |
+| **no DB / DB fails** | none or fails | error + "call or WhatsApp us" | Nothing is silently swallowed |
+
+That third row is the important one: a database problem no longer costs a
+booking. The last row is deliberate — the form never claims success when the
+request went nowhere.
+
+To drop the database entirely, delete the `d1_databases` block from
+`wrangler.jsonc`. `/api/enquiries` then returns `501`, the rate limiter stands
+down (the honeypot still applies), and each notification is labelled *"this is
+the only copy"* with a quotable `REQ-XXXXXX` reference. **Configure a
+notification channel first** — otherwise the form has nowhere to deliver to and
+will correctly start refusing submissions.
 
 ---
 

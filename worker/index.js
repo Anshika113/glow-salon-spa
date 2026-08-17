@@ -9,6 +9,8 @@
  * /api/* (see run_worker_first in wrangler.jsonc).
  */
 
+import { notifyNewEnquiry } from './notify.js';
+
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const json = (data, status = 200) =>
@@ -20,6 +22,9 @@ const json = (data, status = 200) =>
 const now = () => new Date().toISOString();
 
 const s = (v) => (typeof v === 'string' ? v.trim() : v == null ? '' : String(v).trim());
+
+// Human-quotable reference for requests that never reached a database.
+const shortRef = () => 'REQ-' + crypto.randomUUID().slice(0, 6).toUpperCase();
 
 // --- Abuse controls ---------------------------------------------------------
 
@@ -41,6 +46,8 @@ async function bucketFor(request) {
  * block real bookings.
  */
 async function isRateLimited(request, env) {
+  // No database bound means no throttle store; the honeypot still applies.
+  if (!env.DB) return false;
   try {
     const bucket = await bucketFor(request);
     const nowSec = Math.floor(Date.now() / 1000);
@@ -79,7 +86,7 @@ async function readJson(request) {
 
 // --- Route handlers ---------------------------------------------------------
 
-async function contact(request, env) {
+async function contact(request, env, ctx) {
   const b = await readJson(request);
 
   // Honeypot: a field hidden from people but attractive to form-filling bots.
@@ -118,17 +125,68 @@ async function contact(request, env) {
     return json({ ok: false, errors, message: 'Please check the highlighted fields.' }, 400);
   }
 
-  const res = await env.DB.prepare(
-    `INSERT INTO enquiries (name, email, phone, service, message, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  )
-    .bind(f.name, f.email, f.phone, f.service, f.message, now())
-    .run();
+  const createdAt = now();
+
+  // Storing is best-effort. D1 is optional: bind it and every request is kept
+  // as a record, or leave it off entirely and run on notifications alone.
+  let id = null;
+  if (env.DB) {
+    try {
+      const res = await env.DB.prepare(
+        `INSERT INTO enquiries (name, email, phone, service, message, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+        .bind(f.name, f.email, f.phone, f.service, f.message, createdAt)
+        .run();
+      id = res.meta.last_row_id;
+    } catch (err) {
+      // Don't lose the booking over a database problem — fall through and let
+      // the notification carry it instead.
+      console.error('could not store enquiry:', err && err.stack ? err.stack : err);
+    }
+  }
+
+  const stored = id !== null;
+  const enquiry = {
+    ...f,
+    id,
+    stored,
+    ref: stored ? `#${id}` : shortRef(),
+    created_at: createdAt,
+  };
+
+  if (stored) {
+    // Safely on disk — alert the salon in the background so a slow mail
+    // provider can't delay the customer's response.
+    const notifying = notifyNewEnquiry(enquiry, env).catch((err) =>
+      console.error('notification error:', err && err.stack ? err.stack : err)
+    );
+    if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(notifying);
+  } else {
+    // Nothing was written, so the notification is the only copy of this
+    // booking. Wait for it, and only claim success if it actually went out.
+    const delivered = await notifyNewEnquiry(enquiry, env).catch((err) => {
+      console.error('notification error:', err && err.stack ? err.stack : err);
+      return false;
+    });
+
+    if (!delivered) {
+      console.error(`enquiry ${enquiry.ref} LOST — nothing stored and no notification delivered`);
+      return json(
+        {
+          ok: false,
+          message:
+            "Sorry — we couldn't get your request through just now. Please message us on WhatsApp or give us a call and we'll book you straight in.",
+        },
+        503
+      );
+    }
+  }
 
   return json(
     {
       ok: true,
-      id: res.meta.last_row_id,
+      id,
       message: "Thanks! We've received your enquiry and will get back to you shortly.",
     },
     201
@@ -143,6 +201,16 @@ async function listEnquiries(request, env) {
       return json({ ok: false, message: 'Unauthorized' }, 401);
     }
   }
+  if (!env.DB) {
+    return json(
+      {
+        ok: false,
+        message:
+          'No database is bound, so enquiries are not being stored — they are delivered by notification only.',
+      },
+      501
+    );
+  }
   const { results } = await env.DB.prepare(
     'SELECT * FROM enquiries ORDER BY id DESC LIMIT 200'
   ).all();
@@ -152,7 +220,7 @@ async function listEnquiries(request, env) {
 // --- Entry point ------------------------------------------------------------
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     const method = request.method.toUpperCase();
 
@@ -160,7 +228,7 @@ export default {
       if (pathname === '/api/health' && method === 'GET') {
         return json({ status: 'ok', service: 'glow-salon-spa', time: now() });
       }
-      if (pathname === '/api/contact' && method === 'POST') return contact(request, env);
+      if (pathname === '/api/contact' && method === 'POST') return contact(request, env, ctx);
       if (pathname === '/api/enquiries' && method === 'GET') return listEnquiries(request, env);
 
       if (pathname.startsWith('/api/')) {
