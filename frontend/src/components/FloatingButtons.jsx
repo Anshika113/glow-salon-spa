@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { business, whatsappLink } from '../data.js'
 
@@ -32,10 +33,29 @@ export default function FloatingButtons() {
     "Hi Glow Salon & Spa, I'd like some help choosing a service.",
   )
 
+  // The button is fixed to the bottom-right, which is exactly where the footer
+  // credit line ends up. Step out of the way once that strip is on screen —
+  // the footer carries its own WhatsApp link, so nothing is lost.
+  const [atFooter, setAtFooter] = useState(false)
+
+  useEffect(() => {
+    const bar = document.querySelector('.footer__bar')
+    if (!bar || typeof IntersectionObserver === 'undefined') return
+
+    const io = new IntersectionObserver(([entry]) => setAtFooter(entry.isIntersecting), {
+      // Trigger a little early so the two never visually touch.
+      rootMargin: '0px 0px 40px 0px',
+    })
+    io.observe(bar)
+    return () => io.disconnect()
+  }, [])
+
   return (
     <>
       <a
-        className="fab"
+        className={`fab ${atFooter ? 'is-tucked' : ''}`}
+        aria-hidden={atFooter}
+        tabIndex={atFooter ? -1 : undefined}
         href={chatLink}
         target="_blank"
         rel="noreferrer"

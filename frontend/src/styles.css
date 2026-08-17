@@ -1096,9 +1096,18 @@ button { font: inherit; color: inherit; }
   letter-spacing: 0.14em;
   text-transform: uppercase;
   box-shadow: 0 14px 34px -16px rgba(23, 23, 23, 0.6);
-  transition: background 0.35s var(--ease), color 0.35s var(--ease);
+  transition: background 0.35s var(--ease), color 0.35s var(--ease),
+    opacity 0.3s var(--ease), transform 0.3s var(--ease), visibility 0.3s;
 }
 .fab:hover { background: var(--clay); color: var(--ink); }
+/* Tucked away while the footer credit strip is on screen, so the two never
+   overlap. Kept out of the tab order and off the pointer while hidden. */
+.fab.is-tucked {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  pointer-events: none;
+}
 .fab__tip {
   position: absolute;
   right: 0;
