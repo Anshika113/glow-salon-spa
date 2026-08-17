@@ -1,40 +1,73 @@
 # Images — drop your photos here
 
-Out of the box the site already shows **free Unsplash stock photos** so it looks
-finished immediately. The load order for every image is:
+All site photography lives in **`photos/`**, saved at two widths so every image
+ships a real `srcset` and phones don't download desktop-sized files:
 
-> **your local file → stock photo → gradient tile**
+```
+photos/<name>-640.jpg     ← used up to ~640px wide
+photos/<name>-1280.jpg    ← used above that
+photos/portrait-hair-1600.jpg   ← hero only, for large screens
+```
 
-So the moment you drop a file at one of the paths below, it **overrides the stock
-photo** — no code changes needed. And if a photo ever fails to load, the styled
-gradient shows instead, so nothing ever breaks (online or offline).
+To use the salon's own photography, **overwrite these files keeping the same
+names** — no code changes needed. If an image is ever missing, `SmartImage`
+removes itself and the warm tone underneath shows through, so the site never
+displays a broken image.
 
-Save your photos with the **exact filenames** below (JPG, PNG or WebP all work —
-if you use a different extension, update the path in `src/data.js`).
+To re-fetch the current placeholder set, run from `frontend/`:
 
-## Hero (folder: `hero/`)
-| File | Shown as | Suggested size |
-|------|----------|----------------|
-| `hero/salon.jpg` | Large left panel — salon interior / a hero shot | ~1200 × 1500 (portrait) |
-| `hero/spa.jpg`   | Small gold panel — a spa / treatment close-up  | ~800 × 800 (square) |
+```bash
+node download-images.js
+```
 
-## Gallery (folder: `gallery/`)
-| File | Caption |
-|------|---------|
-| `gallery/hair-studio.jpg`  | Hair Studio |
-| `gallery/colour-bar.jpg`   | Colour Bar |
-| `gallery/skin-facials.jpg` | Skin & Facials |
-| `gallery/bridal-suite.jpg` | Bridal Suite |
-| `gallery/nail-lounge.jpg`  | Nail Lounge |
-| `gallery/spa-rooms.jpg`    | Spa Rooms |
-| `gallery/reception.jpg`    | Reception |
-| `gallery/relaxation.jpg`   | Relaxation |
+> **Before going live:** the files currently in `photos/` are free-licence
+> Unsplash stock, hand-picked per slot. They are captioned by area and service
+> and are never presented as the salon's own client results — but they are not
+> your salon. Replace them with real photography of your space, team and work.
+
+## What each file is used for
+
+| File (`photos/…`) | Where it appears |
+|---|---|
+| `portrait-hair` | **Hero** — the main image on the home page |
+| `detail-scissors` | Hero — small inset over the lower-left of the hero image |
+| `hair-styling` | Services → **Hair** category |
+| `skin-facial` | Services → **Skin** category |
+| `spa-massage` | Services → **Spa** category |
+| `makeup-beauty` | Services → **Makeup** category |
+| `nails-hands` | Services → **Nails** category |
+| `bridal-portrait` | Services → **Bridal** category |
+| `bridal-veil` | Signature services — Bridal & Party Makeup |
+| `hair-wash` | Signature services — Hair Colour & Highlights |
+| `spa-stones` | Signature services — Spa & Massage |
+| `salon-chairs` | "A little time for yourself" — large image |
+| `skin-treatment` | "A little time for yourself" — small image |
+| `salon-mirrors` | "A little time for yourself" — small image |
+| `salon-products` | About page |
+| `salon-reception` | About page **and** gallery ("Reception") |
+| `hair-salon-floor` | Gallery — "Hair Studio" |
+| `hair-colour` | Gallery — "Colour Bar" |
+| `skin-glow` | Gallery — "Skin & Facials" |
+| `makeup-bridal-eye` | Gallery — "Bridal Suite" |
+| `makeup-artist` | Gallery — "Makeup Studio" |
+| `nails-technician` | Gallery — "Nail Lounge" |
+| `spa-room` | Gallery — "Spa Rooms" |
+| `spa-shoulders` | Gallery — "Relaxation" |
+
+Captions, categories and crop ratios for the gallery live in the `gallery`
+array in `src/data.js`.
 
 ## Tips
-- **Compress before uploading** (e.g. squoosh.app or tinypng.com) — aim for < 300 KB per
-  image so the site stays fast. WebP gives the best quality-to-size.
-- Landscape or portrait both work; images are cropped to fill (`object-fit: cover`).
-- Prefer a **remote URL**? Paste a full `https://…` link into `img` (gallery) or
-  `heroImages` (hero) in `src/data.js` instead of a local path.
-- To change captions, filenames or add/remove tiles, edit the `gallery` array in
-  `src/data.js`.
+
+- **Compress before uploading** (squoosh.app, tinypng.com) — aim for well under
+  300 KB per file. The whole `photos/` folder is currently ~6.6 MB for 49 files.
+- Export both widths for each name. If you only supply the `-1280` file the
+  `srcset` still works — browsers just won't have a smaller option.
+- Images are cropped to fill (`object-fit: cover`), so keep the subject near the
+  centre. Portrait crops suit the category and gallery tiles best.
+- Prefer a remote URL? Pass a full `https://…` string instead of `photo(…)` in
+  `src/data.js` — `SmartImage` accepts plain strings, and an array of candidates
+  if you want a fallback chain.
+- Adding **team photos** or **before/after pairs**? Drop them in here and fill in
+  the `team` / `transformations` arrays in `src/data.js` — those sections are
+  built and hidden, and switch on as soon as they have real data.

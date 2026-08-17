@@ -9,20 +9,40 @@ import Services from './pages/Services.jsx'
 import Gallery from './pages/Gallery.jsx'
 import Contact from './pages/Contact.jsx'
 
-function ScrollToTop() {
-  const { pathname } = useLocation()
+/**
+ * Jump to the top on navigation — unless the URL carries a hash, in which case
+ * scroll to that section instead (`/services#hair`, `/contact#book`). The
+ * `scroll-padding-top` in styles.css keeps the target clear of the fixed navbar.
+ */
+function ScrollManager() {
+  const { pathname, hash } = useLocation()
+
   useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
+    if (!hash) {
+      window.scrollTo(0, 0)
+      return
+    }
+    // Wait a frame so the target section exists before we scroll to it.
+    const id = requestAnimationFrame(() => {
+      const target = document.getElementById(decodeURIComponent(hash.slice(1)))
+      if (target) target.scrollIntoView({ block: 'start' })
+      else window.scrollTo(0, 0)
+    })
+    return () => cancelAnimationFrame(id)
+  }, [pathname, hash])
+
   return null
 }
 
 export default function App() {
   return (
     <>
-      <ScrollToTop />
+      <ScrollManager />
+      <a className="sr-only" href="#main">
+        Skip to content
+      </a>
       <Navbar />
-      <main>
+      <main id="main">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />

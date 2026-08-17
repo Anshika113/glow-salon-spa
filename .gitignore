@@ -1,10 +1,15 @@
-node_modules/ 
-dist/ 
-.env 
-.env.* 
-__pycache__/ 
-*.pyc 
-*.db 
-.venv/ 
-venv/ 
-.vite 
+node_modules/
+dist/
+.env
+.env.*
+__pycache__/
+*.pyc
+*.db
+.venv/
+venv/
+.vite
+
+# Superseded placeholder imagery. The site now uses public/images/photos/ —
+# these folders are left on disk only so nothing is lost, and are safe to delete.
+frontend/public/images/hero/
+frontend/public/images/gallery/
