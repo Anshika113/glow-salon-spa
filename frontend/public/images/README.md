@@ -1,13 +1,20 @@
 # Images — drop your photos here
 
-All site photography lives in **`photos/`**, saved at two widths so every image
-ships a real `srcset` and phones don't download desktop-sized files:
+All site photography lives in **`photos/`**, saved at two widths **and two
+formats**, so every image ships a real `srcset` and phones don't download
+desktop-sized files:
 
 ```
-photos/<name>-640.jpg     ← used up to ~640px wide
-photos/<name>-1280.jpg    ← used above that
-photos/portrait-hair-1600.jpg   ← hero only, for large screens
+photos/<name>-640.webp    ← served to almost every browser (~65% smaller)
+photos/<name>-1280.webp
+photos/<name>-640.jpg     ← fallback for anything that can't decode WebP
+photos/<name>-1280.jpg
+photos/portrait-hair-1600.{webp,jpg}   ← hero only, for large screens
 ```
+
+`SmartImage` renders a `<picture>` that offers the WebP first and keeps the JPEG
+as the `<img>` fallback. Supplying only the JPEGs still works — browsers just
+download the larger file.
 
 To use the salon's own photography, **overwrite these files keeping the same
 names** — no code changes needed. If an image is ever missing, `SmartImage`
@@ -60,7 +67,8 @@ array in `src/data.js`.
 ## Tips
 
 - **Compress before uploading** (squoosh.app, tinypng.com) — aim for well under
-  300 KB per file. The whole `photos/` folder is currently ~6.6 MB for 49 files.
+  300 KB per file. `photos/` is currently ~8.6 MB across 98 files, but a visitor
+  only ever downloads the WebP variants (2.2 MB total, and far less per page).
 - Export both widths for each name. If you only supply the `-1280` file the
   `srcset` still works — browsers just won't have a smaller option.
 - Images are cropped to fill (`object-fit: cover`), so keep the subject near the

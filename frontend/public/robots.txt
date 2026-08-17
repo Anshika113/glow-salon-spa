@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Enquiry data and health checks are not content.
+Disallow: /api/
+
+Sitemap: https://glow-salon-spa.anshikami7890.workers.dev/sitemap.xml

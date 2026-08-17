@@ -23,13 +23,32 @@ Cloudflare's edge; the Worker only runs for `/api/*`.
 
 ### Features
 
-Editorial, art-directed layout · responsive images with `srcset` · appointment
-request flow (service, preferred date & time, name, phone) saved to D1 ·
-WhatsApp as a first-class booking channel · mobile Call / WhatsApp / Book action
-bar · click-to-call · per-category service pages with deep links · filterable
-gallery · Google Maps · SEO (title, meta description, Open Graph, canonical,
-`BeautySalon` structured data) · accessible forms, focus states and skip link ·
-restrained scroll reveals that respect `prefers-reduced-motion`.
+Editorial, art-directed layout · WebP with JPEG fallback and responsive `srcset`
+· appointment request flow (service, preferred date & time, name, phone) saved
+to D1 · WhatsApp as a first-class booking channel · mobile Call / WhatsApp /
+Book action bar · click-to-call · per-category service pages with deep links ·
+filterable gallery · Google Maps · spam protection (honeypot + per-IP rate
+limit) · SEO (title, meta description, Open Graph image, canonical, sitemap,
+robots, `BeautySalon` structured data) · accessible forms, focus states and skip
+link · restrained scroll reveals that respect `prefers-reduced-motion`.
+
+### Spam protection
+
+Two layers, both in `worker/index.js`:
+
+- **Honeypot** — the form carries a `company` field positioned off-screen and
+  removed from the tab order. Bots fill it; people can't. A submission with it
+  filled gets a `201` (so the bot thinks it worked) and is discarded.
+- **Rate limit** — 5 submissions per IP per 10 minutes, returning `429`. The
+  `rate_limit` table stores a **SHA-256 of the IP**, never the address itself,
+  and the check fails open so a missing table can't block real bookings.
+
+Re-apply `schema.sql` to add the `rate_limit` table to an existing database —
+both statements are `IF NOT EXISTS`, so it's safe to run again:
+
+```bash
+npx wrangler d1 execute glow-salon-spa --remote --file=./schema.sql
+```
 
 ### Design system
 
@@ -216,6 +235,13 @@ npx wrangler d1 execute glow-salon-spa --remote \
   and the bookable time list are both derived from them)
 - **SEO title/description/social preview & structured data** →
   `frontend/index.html`
+- **Domain** → when you move off `*.workers.dev`, update the URL in
+  `frontend/index.html` (canonical, `og:url`, `og:image`, JSON-LD),
+  `public/sitemap.xml` and `public/robots.txt`
+- **Analytics** → a commented Cloudflare Web Analytics snippet sits at the
+  bottom of `frontend/index.html`; paste in a token to switch it on (cookie-less,
+  so no consent banner needed)
+- **Share image** → `frontend/public/images/og-cover.jpg` (1200×630)
 
 > The sample phone, WhatsApp, email, address, map and social links are
 > placeholders. Update them in `data.js` **and** the JSON-LD block in

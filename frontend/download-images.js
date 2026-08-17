@@ -10,6 +10,9 @@
  * (see SmartImage.jsx): `<name>-640.jpg` and `<name>-1280.jpg`
  * (the hero portrait also gets a 1600px variant).
  *
+ * Unsplash serves a WebP copy of every size too, which is ~65% smaller — those
+ * are saved alongside as `<name>-<width>.webp` and offered first via <picture>.
+ *
  * Run once from the `frontend` folder:
  *     node download-images.js
  *
@@ -72,13 +75,13 @@ const PHOTOS = {
 // The hero image is displayed largest, so it gets an extra width.
 const WIDTHS = (name) => (name === 'portrait-hair' ? [640, 1280, 1600] : [640, 1280])
 
-const url = (ref, w) =>
+const url = (ref, w, fmt) =>
   ref.startsWith('photo-')
-    ? `https://images.unsplash.com/${ref}?w=${w}&q=72&fm=jpg&fit=max`
-    : `https://unsplash.com/photos/${ref}/download?force=true&w=${w}`
+    ? `https://images.unsplash.com/${ref}?w=${w}&q=72&fm=${fmt}&fit=max`
+    : `https://unsplash.com/photos/${ref}/download?force=true&w=${w}${fmt === 'webp' ? '&fm=webp' : ''}`
 
-async function grab(ref, w) {
-  const res = await fetch(url(ref, w), {
+async function grab(ref, w, fmt) {
+  const res = await fetch(url(ref, w, fmt), {
     headers: { 'User-Agent': 'Mozilla/5.0' },
     redirect: 'follow',
   })
@@ -95,14 +98,16 @@ let ok = 0
 let failed = 0
 for (const [name, ref] of Object.entries(PHOTOS)) {
   for (const w of WIDTHS(name)) {
-    const file = `${name}-${w}.jpg`
-    try {
-      fs.writeFileSync(path.join(OUT, file), await grab(ref, w))
-      ok++
-      console.log(`  ✓ ${file}`)
-    } catch (e) {
-      failed++
-      console.log(`  ✗ ${file} — ${e.message}`)
+    for (const fmt of ['jpg', 'webp']) {
+      const file = `${name}-${w}.${fmt}`
+      try {
+        fs.writeFileSync(path.join(OUT, file), await grab(ref, w, fmt))
+        ok++
+        console.log(`  ✓ ${file}`)
+      } catch (e) {
+        failed++
+        console.log(`  ✗ ${file} — ${e.message}`)
+      }
     }
   }
 }

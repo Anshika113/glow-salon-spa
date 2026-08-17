@@ -21,8 +21,10 @@
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="en_IN" />
     <meta property="og:url" content="https://glow-salon-spa.anshikami7890.workers.dev/" />
-    <meta property="og:image" content="/images/photos/portrait-hair-1280.jpg" />
-    <meta property="og:image:alt" content="A client at Glow Salon &amp; Spa with freshly styled hair" />
+    <meta property="og:image" content="https://glow-salon-spa.anshikami7890.workers.dev/images/og-cover.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Glow Salon &amp; Spa — look good, feel better. Bandra West, Mumbai." />
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -33,7 +35,13 @@
       href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="preload" as="image" href="/images/photos/portrait-hair-1280.jpg" imagesrcset="/images/photos/portrait-hair-640.jpg 640w, /images/photos/portrait-hair-1280.jpg 1280w, /images/photos/portrait-hair-1600.jpg 1600w" />
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      imagesrcset="/images/photos/portrait-hair-640.webp 640w, /images/photos/portrait-hair-1280.webp 1280w, /images/photos/portrait-hair-1600.webp 1600w"
+      imagesizes="(max-width: 960px) 100vw, 48vw"
+    />
 
     <!--
       LocalBusiness structured data. Every value below mirrors the real details
@@ -96,5 +104,20 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!--
+      Cloudflare Web Analytics — free, cookie-less, and therefore needs no
+      consent banner. To switch it on:
+        1. Cloudflare dashboard → Analytics & Logs → Web Analytics → Add a site
+        2. Copy the token it gives you into TOKEN_HERE below
+        3. Uncomment the script tag
+      Delete this block if you'd rather not measure traffic at all.
+
+    <script
+      defer
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon='{"token": "TOKEN_HERE"}'
+    ></script>
+    -->
   </body>
 </html>

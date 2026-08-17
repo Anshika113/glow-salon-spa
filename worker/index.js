@@ -21,6 +21,53 @@ const now = () => new Date().toISOString();
 
 const s = (v) => (typeof v === 'string' ? v.trim() : v == null ? '' : String(v).trim());
 
+// --- Abuse controls ---------------------------------------------------------
+
+// Max submissions allowed from one IP inside a rolling window.
+const RATE_LIMIT = 5;
+const RATE_WINDOW_SECONDS = 10 * 60;
+
+// Hash the IP so the throttle table never holds a raw address.
+async function bucketFor(request) {
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ip));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Fixed-window throttle backed by D1. Returns true when the caller is over the
+ * limit. Fails open: if the rate_limit table is missing (an older database that
+ * hasn't had schema.sql re-applied) we let the request through rather than
+ * block real bookings.
+ */
+async function isRateLimited(request, env) {
+  try {
+    const bucket = await bucketFor(request);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const row = await env.DB.prepare('SELECT hits, window_start FROM rate_limit WHERE bucket = ?')
+      .bind(bucket)
+      .first();
+
+    if (!row || nowSec - row.window_start >= RATE_WINDOW_SECONDS) {
+      await env.DB.prepare(
+        `INSERT INTO rate_limit (bucket, hits, window_start) VALUES (?, 1, ?)
+         ON CONFLICT(bucket) DO UPDATE SET hits = 1, window_start = excluded.window_start`
+      )
+        .bind(bucket, nowSec)
+        .run();
+      return false;
+    }
+
+    if (row.hits >= RATE_LIMIT) return true;
+
+    await env.DB.prepare('UPDATE rate_limit SET hits = hits + 1 WHERE bucket = ?').bind(bucket).run();
+    return false;
+  } catch (err) {
+    console.error('rate limit check skipped:', err && err.message ? err.message : err);
+    return false;
+  }
+}
+
 async function readJson(request) {
   try {
     const body = await request.json();
@@ -34,6 +81,24 @@ async function readJson(request) {
 
 async function contact(request, env) {
   const b = await readJson(request);
+
+  // Honeypot: a field hidden from people but attractive to form-filling bots.
+  // Answer 201 so the bot believes it succeeded and doesn't retry differently.
+  if (s(b.company)) {
+    return json({ ok: true, message: "Thanks! We've received your enquiry and will get back to you shortly." }, 201);
+  }
+
+  if (await isRateLimited(request, env)) {
+    return json(
+      {
+        ok: false,
+        message:
+          "You've sent a few requests already — please give us a little while, or message us on WhatsApp.",
+      },
+      429
+    );
+  }
+
   const f = {
     name: s(b.name),
     email: s(b.email),

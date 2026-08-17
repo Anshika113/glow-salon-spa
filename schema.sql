@@ -9,3 +9,12 @@ CREATE TABLE IF NOT EXISTS enquiries (
     message    TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+-- Submission throttling. `bucket` is a SHA-256 of the submitter's IP, so no raw
+-- IP address is ever stored; `window_start` is a unix epoch in seconds.
+-- Safe to run against an existing database — both statements are IF NOT EXISTS.
+CREATE TABLE IF NOT EXISTS rate_limit (
+    bucket       TEXT PRIMARY KEY,
+    hits         INTEGER NOT NULL,
+    window_start INTEGER NOT NULL
+);

@@ -87,9 +87,13 @@ export const rating = null
 const PHOTOS = '/images/photos'
 
 export function photo(name, alt = '', widths = [640, 1280]) {
+  const set = (ext) => widths.map((w) => `${PHOTOS}/${name}-${w}.${ext} ${w}w`).join(', ')
   return {
+    // WebP is ~65% smaller; the JPEG stays as the <img> fallback so the image
+    // still loads on anything that can't decode WebP.
     src: `${PHOTOS}/${name}-${widths[widths.length - 1]}.jpg`,
-    srcSet: widths.map((w) => `${PHOTOS}/${name}-${w}.jpg ${w}w`).join(', '),
+    srcSet: set('jpg'),
+    webpSrcSet: set('webp'),
     alt,
   }
 }

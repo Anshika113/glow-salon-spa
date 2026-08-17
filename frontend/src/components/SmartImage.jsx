@@ -36,7 +36,7 @@ export default function SmartImage({
   const url = isObject ? current.src : current
   const label = alt ?? (isObject ? current.alt : '') ?? ''
 
-  return (
+  const img = (
     <img
       src={url}
       srcSet={isObject ? current.srcSet : undefined}
@@ -50,4 +50,16 @@ export default function SmartImage({
       onError={() => setIdx((i) => i + 1)}
     />
   )
+
+  // Offer WebP first where the candidate provides it; the <img> above stays as
+  // the JPEG fallback, so onError still walks the candidate chain.
+  if (isObject && current.webpSrcSet) {
+    return (
+      <picture>
+        <source type="image/webp" srcSet={current.webpSrcSet} sizes={sizes} />
+        {img}
+      </picture>
+    )
+  }
+  return img
 }

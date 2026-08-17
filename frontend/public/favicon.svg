@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#2E7D32"/>
-  <text x="32" y="43" font-family="Georgia, serif" font-size="34" font-weight="700"
-        text-anchor="middle" fill="#F7F5F0">G</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Glow Salon &amp; Spa">
+  <rect width="64" height="64" rx="6" fill="#171717"/>
+  <rect x="4.5" y="4.5" width="55" height="55" rx="3" fill="none" stroke="#B79B8B" stroke-width="1"/>
+  <text x="32" y="43.5" font-family="Instrument Serif, Georgia, 'Times New Roman', serif"
+        font-size="36" text-anchor="middle" fill="#F5F1EA">G</text>
 </svg>

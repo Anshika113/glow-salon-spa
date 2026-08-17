@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { services, timePreferences, whatsappLink, appointmentMessage } from '../data.js'
 import { submitContact } from '../api.js'
 
-const empty = { name: '', phone: '', email: '', service: '', date: '', time: '', message: '' }
+// `company` is the honeypot — hidden from people, tempting to bots. The Worker
+// silently discards any submission that fills it in.
+const empty = { name: '', phone: '', email: '', service: '', date: '', time: '', message: '', company: '' }
 
 // Today in the YYYY-MM-DD shape <input type="date"> expects, in local time.
 const today = () => {
@@ -53,6 +55,7 @@ export default function BookingForm({ initialService = '' }) {
         phone: form.phone,
         service: form.service,
         message: composed(),
+        company: form.company,
       })
       setStatus({ state: 'success', msg: res.message })
       setForm({ ...empty, service: initialService })
@@ -182,6 +185,20 @@ export default function BookingForm({ initialService = '' }) {
         </div>
       </div>
 
+      {/* Honeypot — off-screen and skipped by keyboard and screen readers. */}
+      <div className="hp" aria-hidden="true">
+        <label htmlFor="bf-company">Company (leave blank)</label>
+        <input
+          id="bf-company"
+          name="company"
+          type="text"
+          value={form.company}
+          onChange={update}
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
+
       <div className="form__foot">
         <button className="btn btn--primary btn--block" type="submit" disabled={busy}>
           {busy ? 'Sending…' : 'Request an appointment'}
@@ -201,6 +218,7 @@ export default function BookingForm({ initialService = '' }) {
         </a>
         <p className="form__note">
           We’ll confirm your slot on WhatsApp or by phone — a request doesn’t reserve the time yet.
+          Your details are used only to arrange this appointment and are never shared.
         </p>
       </div>
     </form>
